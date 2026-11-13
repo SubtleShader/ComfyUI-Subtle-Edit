@@ -1,6 +1,6 @@
 # ComfyUI-Subtle-Edit
 
-One node: **Subtle Edit** (`conditioning/subtle_edit`). Edit-LoRA conditioning for MOSS-Image and Krea 2.
+One node: **Subtle Edit** (`conditioning/subtle_edit`). Edit conditioning for MOSS-Image and Krea 2.
 
 | Input | What it does |
 |---|---|
