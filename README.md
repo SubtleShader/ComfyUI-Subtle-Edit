@@ -1,51 +1,130 @@
 # ComfyUI-Subtle-Edit
 
-One node: **Subtle Edit** (`conditioning/subtle_edit`). Edit conditioning for MOSS-Image and Krea 2.
+**Subtle Edit** is one ComfyUI node for editing images. You give it a picture and an instruction like
+"Change the jacket to red leather", and the model changes only what you asked for.
 
-| Input | What it does |
+It needs an editing-capable model. That can be either:
+
+- an **edit LoRA** loaded on top of a normal base model, or
+- an **edit model**: a checkpoint where the edit functionality is already built-in. Then you don't need a LoRA at all.
+
+It works with two model families:
+
+- **MOSS-Image** with edits trained in AI-Toolkit (or the Moss-Image-Edit LoRA)
+- **Krea 2** with the krea2edit LoRAs by Conrad Locke
+
+You find the node under **conditioning → subtle_edit → Subtle Edit**.
+
+---
+
+## Installation
+
+1. Unzip and copy the `ComfyUI-Subtle-Edit` folder into `ComfyUI/custom_nodes/`.
+2. Restart ComfyUI.
+
+You need a recent ComfyUI that supports MOSS-Image and Krea 2. Nothing else has to be installed.
+
+---
+
+## Quick start
+
+The easiest way is to open one of the ready-made workflows from the `workflow` folder
+(drag the file into ComfyUI):
+
+- `subtle_edit_moss.json` for MOSS-Image
+- `subtle_edit_krea2.json` for Krea 2
+
+Then:
+
+1. Select your own files in the loader nodes: model, text encoder and VAE.
+   - **With an edit LoRA:** pick your base model and select the LoRA in the LoRA loader.
+   - **With an edit model:** pick the edit model and bypass the LoRA loader (select it and press Ctrl+B) or delete it.
+   - The text encoder must be a version **with vision weights** (the official ComfyUI files have them).
+2. Load the picture you want to edit.
+3. Type what you want to change into the prompt of the top Subtle Edit node.
+4. Press **Run**.
+
+The workflow makes the output the same size as your picture (about 1 megapixel). Keep it that way:
+the edit works best when the output and the input picture have the same size.
+
+---
+
+## The settings
+
+You only need the first four for normal use. Leave everything else at its default until you
+want to experiment.
+
+### Basic settings
+
+| Setting | What to choose |
 |---|---|
-| `model` | `moss` or `krea2` |
-| `edit_format` | moss: `ai-toolkit (kv_cache off)`, `ai-toolkit`, `Moss-Image-Edit`. krea2: `krea2edit` |
-| `encode_res` | Resolution the text encoder sees the images at, must match training. moss: edge of a square pixel budget (AI-Toolkit `vlm_max_pixels` = edge², 384 stock, 512, 768). krea2edit: longest side (Locke's `grounding_px`, 768) |
-| `ref_strength` | Attention weight of the images the text encoder sees (meaning, not pixels). 1.0 = off, 0 = images left out of the text encoder. moss: core's `image_strength`. krea2: bias on the DiT's attention to the vision tokens |
-| `ref_boost` | Fidelity dial for `image_1`: multiplies the generated image's attention to its latent tokens. 1.0 = off, range 0-20. Optimal value is LoRA-specific |
-| `ref_position`, `ref_position_2` | Where `image_1` / `image_2` sit in position space. `aligned (trained)` = on the output layout (normal edits). `beside (right of target)` = right of the canvas: appearance and identity still flow, the layout pin is gone (restaging) |
-| `vae`, `image_1`, `image_2` | `image_1` = image to edit, `image_2` = optional extra reference without boost |
-| `boost_mask` | Optional MASK on `image_1` (same aspect): the boost only applies to the tokens inside it (e.g. the face). Not connected = whole `image_1` |
+| **prompt** | What to change, e.g. *"Make it night"* or *"Change her hair to blonde"*. |
+| **model** | `moss` for MOSS-Image, `krea2` for Krea 2. |
+| **edit_format** | How your edit LoRA or edit model was trained. Ask the author if unsure. MOSS: `ai-toolkit (kv_cache off)`, `ai-toolkit` or `Moss-Image-Edit`. Krea 2: `krea2edit`. It must fit the selected model, otherwise you get an error. |
+| **encode_res** | How big the text encoder "looks" at your picture. Must match how the edit LoRA or model was trained. Typical: **512** for MOSS LoRAs trained at 512, **384** for standard AI-Toolkit MOSS LoRAs, **768** for krea2edit. |
 
-Use the node for the negative too, with the same images and settings.
+### Optional settings
 
-## krea2edit
+| Setting | What it does | Default |
+|---|---|---|
+| **ref_strength** | How much the model pays attention to *what is in* the picture (people, objects, scene). Higher = follows the picture's content more, lower = follows the prompt more. 0 = the text side ignores the picture. | 1.0 (off) |
+| **ref_boost** | How closely the result keeps the *look* of your picture (face, colors, details). Higher = closer to the original, lower = more freedom to change. Too high can block the edit. Try 1.2 to 1.5 for MOSS. Locke's Krea 2 example uses 4. | 1.0 (off) |
+| **ref_position** | `aligned (trained)` = the result keeps the layout of your picture. Use this for normal edits. `beside (right of target)` = the model still uses the person or object from your picture, but is free to change pose and framing. Experimental. | aligned |
+| **ref_position_2** | The same choice for the second picture. | aligned |
 
-The layout of [comfyui-krea2edit](https://github.com/lbouaraba/comfyui-krea2edit) by Conrad Locke:
-the instruction is encoded together with the image(s) through Qwen3-VL with the krea2edit template
-(as `Krea2EditGroundedEncode`), and the images go in as clean reference latents at RoPE frame 1, 2
-through core Krea 2's native references (`ref_latents_method` `index`). This gives the same result as
-`Krea2EditModelPatch` (`fit`) when the output has the same size as `image_1`, so generate at the size
-of the scaled input (the included workflow does). `ref_boost` boosts `image_1` (Locke's `ref_boost_a`
-in two-image workflows, `ref_boost` with one image), `boost_mask` is Locke's `ref_boost_mask`, and
-`ref_position` / `ref_position_2` are Locke's `ref_position_a` / `ref_position` (scene first, person second).
-`bag of features` is not included.
+A value of **1.0** for ref_strength and ref_boost means "no change". The node then behaves exactly as without these settings.
 
-## Model-side internals
+### Inputs (the connection dots)
 
-Core has no hooks for `ref_boost`, `boost_mask` and `ref_position`, so the pack wraps `extra_conds` and the
-diffusion model `forward` of MOSS-Image and Krea 2 (and MOSS `rope`) at import:
-- boost: `log(boost)` on the generated image's attention to `image_1`'s (masked) latent tokens
-  (MOSS: attention override, Krea 2: `attn1_patch`)
-- beside: the reference's w positions start one token right of the canvas (MOSS: `rope`, also for the
-  precomputed kv_cache keys; Krea 2: `post_input`)
+| Input | What to connect |
+|---|---|
+| **clip** | The text encoder from your Load CLIP node. |
+| **vae** | The VAE from your Load VAE node. |
+| **image_1** | The picture you want to edit. |
+| **image_2** | *Optional.* A second picture, e.g. a person or a piece of clothing you want to bring in. Mention it in the prompt ("the person from picture 2"). |
+| **boost_mask** | *Optional.* A mask on image_1. ref_boost then only works inside the mask, e.g. only on the face, so the face stays close to the original while the rest can change. Draw it with ComfyUI's mask editor (right-click on Load Image → Open in MaskEditor) and connect the MASK output. |
 
-They do nothing at default settings. For MOSS, `ref_position` is untrained: test it. A ComfyUI update that
-changes these internals can disable them; the console then prints `[Subtle-Edit] ... disabled/ignored`.
+---
 
-## Install
+## Positive and negative prompt
 
-Copy the `ComfyUI-Subtle-Edit` folder to `ComfyUI/custom_nodes/` and restart. Remove older versions
-(`ComfyUI-MOSS-Edit-Res`, `ComfyUI-Subtle-Moss-Edit`) first. Needs a ComfyUI with native MOSS-Image
-and Krea 2 support (tested against master `0decb39`, 8 Nov 2026). No extra dependencies.
+Use **two** Subtle Edit nodes, like in the included workflows:
 
-## Workflows
+- the top one with your instruction → **positive**
+- the bottom one with an empty prompt → **negative**
 
-`workflow/subtle_edit_moss.json` and `workflow/subtle_edit_krea2.json`: pick your own model, LoRA,
-text encoder (with vision weights) and VAE files.
+Connect the **same picture(s)** and use the **same settings** on both. Otherwise the result can look wrong.
+
+(With Krea 2 Turbo at CFG 1 the negative is not used, but it does not hurt to keep it.)
+
+---
+
+## Examples
+
+**Normal edit (change color, clothes, background, lighting)**
+Everything on default. Only set model, edit_format and encode_res.
+
+**The face changes too much**
+Raise ref_boost a bit (e.g. 1.3), optionally with a boost_mask on the face.
+
+**The edit is too weak, the picture hardly changes**
+Lower ref_boost below 1.0 or set it back to 1.0. With an edit LoRA, also check the LoRA strength in the LoRA loader.
+
+**Put a person into a new scene (Krea 2)**
+image_1 = the scene, image_2 = the person. ref_position = aligned, ref_position_2 = beside.
+
+---
+
+## Troubleshooting
+
+- **Error "edit_format ... is for krea2, but model is set to moss"**: model and edit_format do not fit together. Change one of them.
+- **Results look blurry or shifted**: make sure the output size is the same as your input picture (the included workflows do this automatically).
+- **A message starting with `[Subtle-Edit]` in the console** saying something is "disabled" or "ignored": a ComfyUI update changed something the node needs. The basic editing still works; only ref_boost, boost_mask, ref_position or ref_strength (Krea 2) may not. Please report it.
+- **Old workflows show wrong values after an update**: delete the Subtle Edit nodes and add them again.
+
+---
+
+## Credits
+
+- The Krea 2 mode follows [comfyui-krea2edit](https://github.com/lbouaraba/comfyui-krea2edit) by Conrad Locke and gives the same results as his nodes (when the output has the same size as image_1).
+- MOSS-Image by OpenMOSS, Krea 2 by Krea, AI-Toolkit by ostris.
