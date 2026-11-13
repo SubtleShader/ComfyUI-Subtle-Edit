@@ -19,8 +19,26 @@ You find the node under **conditioning → subtle_edit → Subtle Edit**.
 
 ## Installation
 
-1. Unzip and copy the `ComfyUI-Subtle-Edit` folder into `ComfyUI/custom_nodes/`.
-2. Restart ComfyUI.
+Open a command prompt (cmd), go to your ComfyUI `custom_nodes` folder and clone the repository.
+Change the path to where your ComfyUI is:
+
+```bat
+cd /d C:\ComfyUI\custom_nodes
+git clone https://github.com/SubtleShader/ComfyUI-Subtle-Edit
+```
+
+Then restart ComfyUI.
+
+**Update** to the newest version:
+
+```bat
+cd /d C:\ComfyUI\custom_nodes\ComfyUI-Subtle-Edit
+git pull
+```
+
+Then restart ComfyUI.
+
+Without git: download the zip, unzip it and copy the `ComfyUI-Subtle-Edit` folder into `ComfyUI/custom_nodes/`.
 
 You need a recent ComfyUI that supports MOSS-Image and Krea 2. Nothing else has to be installed.
 
