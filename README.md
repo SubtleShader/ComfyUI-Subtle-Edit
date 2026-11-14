@@ -1,7 +1,9 @@
 # ComfyUI-Subtle-Edit
 
 **Subtle Edit** is one ComfyUI node for editing images. You give it a picture and an instruction like
-"Change the jacket to red leather", and the model changes only what you asked for.
+"Change the color of the dress to red", and the model changes only what you asked for.
+
+<img width="600" height="674" alt="SubtleEdit" src="https://github.com/user-attachments/assets/a194d44a-06a5-4e32-bcbe-40b6359c8ae5" />
 
 It needs an editing-capable model. That can be either:
 
