@@ -1,0 +1,14 @@
+[project]
+name = "comfyui-subtle-edit"
+description = "Image editing node for Moss, Krea 2 and other models"
+version = "1.0.0"
+license = { file = "LICENSE" }
+dependencies = []
+
+[project.urls]
+Repository = "https://github.com/SubtleShader/ComfyUI-Subtle-Edit"
+
+[tool.comfy]
+PublisherId = "subtleshader"
+DisplayName = "Subtle Edit"
+Icon = ""
